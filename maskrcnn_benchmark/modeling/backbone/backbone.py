@@ -7,7 +7,7 @@ from maskrcnn_benchmark.modeling import registry
 from maskrcnn_benchmark.modeling.make_layers import conv_with_kaiming_uniform
 from . import fpn as fpn_module
 from . import resnet
-
+from . import resnet_aug
 
 @registry.BACKBONES.register("R-50-C4")
 @registry.BACKBONES.register("R-50-C5")
@@ -65,6 +65,42 @@ def build_resnet_fpn_p3p7_backbone(cfg):
             cfg.MODEL.FPN.USE_GN, cfg.MODEL.FPN.USE_RELU
         ),
         top_blocks=fpn_module.LastLevelP6P7(in_channels_p6p7, out_channels),
+    )
+    model = nn.Sequential(OrderedDict([("body", body), ("fpn", fpn)]))
+    model.out_channels = out_channels
+    return model
+
+#==========================================
+# Registry for R-xx-FPN-Ax
+#==========================================
+@registry.BACKBONES.register("R-50-FPN-A3")
+@registry.BACKBONES.register("R-50-FPN-A4")
+@registry.BACKBONES.register("R-50-FPN-A5")
+@registry.BACKBONES.register("R-50-FPN-A345")
+@registry.BACKBONES.register("R-101-FPN-A3")
+@registry.BACKBONES.register("R-101-FPN-A4")
+@registry.BACKBONES.register("R-101-FPN-A5")
+@registry.BACKBONES.register("R-101-FPN-A345")
+@registry.BACKBONES.register("R-152-FPN-A3")
+@registry.BACKBONES.register("R-152-FPN-A4")
+@registry.BACKBONES.register("R-152-FPN-A5")
+@registry.BACKBONES.register("R-152-FPN-A345")
+def build_resnet_fpn_backbone_aug(cfg):
+    body = resnet_aug.ResNet(cfg)
+    in_channels_stage2 = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
+    out_channels = cfg.MODEL.RESNETS.BACKBONE_OUT_CHANNELS
+    fpn = fpn_module.FPN(
+        in_channels_list=[
+            in_channels_stage2,
+            in_channels_stage2 * 2,
+            in_channels_stage2 * 4,
+            in_channels_stage2 * 8,
+        ],
+        out_channels=out_channels,
+        conv_block=conv_with_kaiming_uniform(
+            cfg.MODEL.FPN.USE_GN, cfg.MODEL.FPN.USE_RELU
+        ),
+        top_blocks=fpn_module.LastLevelMaxPool(),
     )
     model = nn.Sequential(OrderedDict([("body", body), ("fpn", fpn)]))
     model.out_channels = out_channels

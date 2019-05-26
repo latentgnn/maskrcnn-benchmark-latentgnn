@@ -6,7 +6,7 @@ import time
 import torch
 import torch.distributed as dist
 
-from maskrcnn_benchmark.utils.comm import get_world_size
+from maskrcnn_benchmark.utils.comm import get_world_size, get_rank
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
 from apex import amp
@@ -45,6 +45,7 @@ def do_train(
     device,
     checkpoint_period,
     arguments,
+    writer=None,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
@@ -86,6 +87,18 @@ def do_train(
 
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
+
+        if writer is not None:
+            if iteration % 100 == 0:
+                    if get_rank() == 0:
+                        keys = list(meters.meters.keys())
+                        for item in keys:
+                            # item_bar = item.replace(' ', '_')
+                            writer.add_scalar(item,eval('meters.{}.avg'.format(item)), iteration)
+                        for item in keys:
+                            # item_bar = item.replace(' ', '_')
+                            writer.add_scalar(item+'_global',eval('meters.{}.global_avg'.format(item)), iteration)
+                            
 
         if iteration % 20 == 0 or iteration == max_iter:
             logger.info(

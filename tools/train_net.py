@@ -11,6 +11,8 @@ import argparse
 import os
 
 import torch
+from tensorboardX import SummaryWriter
+
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.solver import make_lr_scheduler
@@ -58,6 +60,11 @@ def train(cfg, local_rank, distributed):
 
     output_dir = cfg.OUTPUT_DIR
 
+    if cfg.PLOT_CURVE:
+        writer = SummaryWriter(output_dir)
+    else:
+        writer = None
+
     save_to_disk = get_rank() == 0
     checkpointer = DetectronCheckpointer(
         cfg, model, optimizer, scheduler, output_dir, save_to_disk
@@ -83,6 +90,7 @@ def train(cfg, local_rank, distributed):
         device,
         checkpoint_period,
         arguments,
+        writer
     )
 
     return model
@@ -166,9 +174,10 @@ def main():
     logger = setup_logger("maskrcnn_benchmark", output_dir, get_rank())
     logger.info("Using {} GPUs".format(num_gpus))
     logger.info(args)
-
-    logger.info("Collecting env info (might take some time)")
-    logger.info("\n" + collect_env_info())
+    
+    if cfg.COLLECT_ENV_INFO:
+        logger.info("Collecting env info (might take some time)")
+        logger.info("\n" + collect_env_info())
 
     logger.info("Loaded configuration file {}".format(args.config_file))
     with open(args.config_file, "r") as cf:

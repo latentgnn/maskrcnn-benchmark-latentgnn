@@ -463,3 +463,10 @@ _C.DTYPE = "float32"
 
 # Enable verbosity in apex.amp
 _C.AMP_VERBOSE = False
+
+
+# ---------------------------------------------------------------------------- #
+# More Misc options(S.Y.Zhang)
+# ---------------------------------------------------------------------------- #
+_C.PLOT_CURVE = False
+_C.COLLECT_ENV_INFO = False
