@@ -28,8 +28,9 @@ from maskrcnn_benchmark.layers import DFConv2d
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.utils.registry import Registry
 
-from latentgnn import LatentGNN, NonLocalBlock
-
+from latentgnn import LatentGNN #, NonLocalBlock
+from latentgnn import GroupLatentGNN
+from latentgnn import LatentGNNOriginal
 
 # ResNet stage specification
 StageSpec = namedtuple(
@@ -178,24 +179,39 @@ class ResNet(nn.Module):
             if stage_spec.feature_aug:
                 feature_aug_name = 'featureaug'+str(stage_spec.index)
                 if cfg.MODEL.FEATURE_AUG.NAME == 'NonLocal':
-                    self.add_module(feature_aug_name, NonLocalBlock(in_channels=out_channels,
-                                                            stride=cfg.MODEL.FEATURE_AUG.NONLOCAL.STRIDE,
-                                                            normalize_method=cfg.MODEL.FEATURE_AUG.NONLOCAL.NORMALIZE_METHOD,
-                                                            use_softmax=cfg.MODEL.FEATURE_AUG.NONLOCAL.USE_SOFTMAX))
-                elif cfg.MODEL.FEATURE_AUG.NAME == 'LatentGNN':
-                    self.add_module(feature_aug_name, LatentGNN(
+                    # self.add_module(feature_aug_name, NonLocalBlock(in_channels=out_channels,
+                    #                                         stride=cfg.MODEL.FEATURE_AUG.NONLOCAL.STRIDE,
+                    #                                         normalize_method=cfg.MODEL.FEATURE_AUG.NONLOCAL.NORMALIZE_METHOD,
+                    #                                         use_softmax=cfg.MODEL.FEATURE_AUG.NONLOCAL.USE_SOFTMAX))
+                    raise NotImplementedError
+                elif cfg.MODEL.FEATURE_AUG.NAME.startswith('LatentGNN'):
+                    # self.add_module(feature_aug_name, LatentGNN(
+                    self.add_module(feature_aug_name, eval(cfg.MODEL.FEATURE_AUG.NAME)(
                                 in_channels=out_channels,
-                                # channel_stride=cfg.MODEL.FEATURE_AUG.LATENTGNN.CHANNEL_STRIDE,
+                                latent_dims=[cfg.MODEL.FEATURE_AUG.LATENTGNN.LATENT_DIM[stage_spec.index-1]] * cfg.MODEL.FEATURE_AUG.LATENTGNN.NUM_LATENT_KERNEL,# channel_stride=cfg.MODEL.FEATURE_AUG.LATENTGNN.CHANNEL_STRIDE,
                                 channel_stride=cfg.MODEL.FEATURE_AUG.LATENTGNN.CHANNEL_STRIDE[stage_spec.index-1],
-                                num_latent_kernel=cfg.MODEL.FEATURE_AUG.LATENTGNN.NUM_LATENT_KERNEL,
-                                num_latent_layer=cfg.MODEL.FEATURE_AUG.LATENTGNN.NUM_LATENT_LAYER,
-                                latent_dim=[cfg.MODEL.FEATURE_AUG.LATENTGNN.LATENT_DIM[stage_spec.index-1]] * cfg.MODEL.FEATURE_AUG.LATENTGNN.NUM_LATENT_KERNEL,
+                                num_kernels=cfg.MODEL.FEATURE_AUG.LATENTGNN.NUM_LATENT_KERNEL,
+                                mode = cfg.MODEL.FEATURE_AUG.LATENTGNN.MODE,
                                 norm_layer=eval(cfg.MODEL.FEATURE_AUG.LATENTGNN.BN),
                                 graph_conv_flag=cfg.MODEL.FEATURE_AUG.LATENTGNN.GRAPH_CONV_FLAG,
+                    ))
+                elif cfg.MODEL.FEATURE_AUG.NAME == 'GroupLatentGNN':
+                    self.add_module(feature_aug_name, GroupLatentGNN(
+                                in_channels=out_channels,
+                                latent_dims=[cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.LATENT_DIM[stage_spec.index-1]] * cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.NUM_LATENT_KERNEL,# channel_stride=cfg.MODEL.FEATURE_AUG.LATENTGNN.CHANNEL_STRIDE,
+                                num_group=cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.NUM_GROUP[stage_spec.index-1],
+                                num_kernels=cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.NUM_LATENT_KERNEL,
+                                mode = cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.MODE,
+                                norm_layer=eval(cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.BN),
+                                graph_conv_flag=cfg.MODEL.FEATURE_AUG.GROUP_LATENTGNN.GRAPH_CONV_FLAG,
                     ))
                 else:
                     raise NotImplementedError
 
+                self.stages.append(feature_aug_name)
+                self.return_features[name] = False
+                self.return_features[feature_aug_name] = stage_spec.return_features
+                
         # Optionally freeze (requires_grad=False) parts of the backbone
         self._freeze_backbone(cfg.MODEL.BACKBONE.FREEZE_CONV_BODY_AT)
 

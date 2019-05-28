@@ -25,6 +25,7 @@ conda install ipython
 
 # maskrcnn_benchmark and coco api dependencies
 pip install ninja yacs cython matplotlib tqdm opencv-python
+pip install tensorboardX tqdm
 
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
 # we give the instructions for CUDA 9.0
@@ -55,6 +56,11 @@ cd maskrcnn-benchmark
 # re-build it
 python setup.py build develop
 
+# Install LatentGNN lib
+cd $INSTALL_DIR
+git clone https://github.com/SHTUPLUS/LatentGNN-V1-PyTorch.git
+cd LatentGNN-V1-PyTorch
+python setup.py build develop
 
 unset INSTALL_DIR
 

@@ -48,6 +48,7 @@ def do_train(
     writer=None,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
+    logger.info(str(model))
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
@@ -80,7 +81,6 @@ def do_train(
         with amp.scale_loss(losses, optimizer) as scaled_losses:
             scaled_losses.backward()
         optimizer.step()
-
         batch_time = time.time() - end
         end = time.time()
         meters.update(time=batch_time, data=data_time)

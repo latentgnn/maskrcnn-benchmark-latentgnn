@@ -6,6 +6,7 @@ from .lr_scheduler import WarmupMultiStepLR
 
 def make_optimizer(cfg, model):
     params = []
+    # import pdb; pdb.set_trace()
     for key, value in model.named_parameters():
         if not value.requires_grad:
             continue
@@ -14,8 +15,10 @@ def make_optimizer(cfg, model):
         if "bias" in key:
             lr = cfg.SOLVER.BASE_LR * cfg.SOLVER.BIAS_LR_FACTOR
             weight_decay = cfg.SOLVER.WEIGHT_DECAY_BIAS
+        # change the lr for the feature augmentation module
+        if "featureaug" in key:
+            lr = cfg.SOLVER.BASE_LR * cfg.MODEL.FEATURE_AUG.LR_FACTOR
         params += [{"params": [value], "lr": lr, "weight_decay": weight_decay}]
-
     optimizer = torch.optim.SGD(params, lr, momentum=cfg.SOLVER.MOMENTUM)
     return optimizer
 
